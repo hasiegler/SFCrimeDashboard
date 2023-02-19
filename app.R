@@ -2,6 +2,7 @@ library(shiny)
 library(tidyverse)
 library(RSocrata)
 library(leaflet)
+library(DT)
 
 # Define UI for application that draws a histogram
 ui <- bootstrapPage(
@@ -33,7 +34,8 @@ ui <- bootstrapPage(
              
              
              tabPanel("Data Exploration",
-                      strong("Testing")
+                      strong("Testing"),
+                      dataTableOutput("new_data")
                
              )
   )
@@ -43,13 +45,42 @@ ui <- bootstrapPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output){
   
-  df <- read.socrata(
-    "https://data.sfgov.org/resource/wg3w-h783.json?incident_date=2023-02-11"
-  )
+  selected_date <- reactive({
+    as.character(input$date)
+  })
   
-  df <- df %>% 
+  yesterday_df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", Sys.Date() - 1))
+  
+  df <- reactive({
+    read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", selected_date()))
+  })
+  
+  yesterday_df <- yesterday_df %>% 
+    mutate(longitude = as.numeric(longitude),
+           latitude = as.numeric(latitude))
+  
+  
+  labels <- paste("<strong>", "<font size='+0.2'>", yesterday_df$incident_description, "</font>", "</strong>",
+                  "<br>",
+                  "<strong>", "Date: ", "</strong>", yesterday_df$incident_date, 
+                  "<br>", 
+                  "<strong>", "Time: ", "</strong>", yesterday_df$incident_time,
+                  "<br>",
+                  "<strong>", "Incident Category: ", "</strong>", yesterday_df$incident_category,
+                  sep = "")
+  
+  output$map <- renderLeaflet({
+    leaflet(data = yesterday_df) %>% 
+      addTiles() %>% 
+      addMarkers(~longitude, ~latitude,
+                 label = lapply(labels, HTML))
+  })
+  
+  observe({
+    
+  df <- df() %>% 
     mutate(longitude = as.numeric(longitude),
            latitude = as.numeric(latitude))
   
@@ -64,13 +95,23 @@ server <- function(input, output) {
                   sep = "")
   
 
-    output$map <- renderLeaflet({
-      leaflet(data = df) %>% 
-        addTiles() %>% 
-        addMarkers(~longitude, ~latitude,
-                   label = lapply(labels, HTML))
-      
+    leafletProxy("map", data = df) %>% 
+      addTiles() %>% 
+      clearMarkers() %>% 
+      addMarkers(~longitude, ~latitude,
+                 label = lapply(labels, HTML))
+    
+  })
+ 
+  
+  observe({
+    new_data <- df()
+    
+    output$new_data <- renderDataTable({
+      datatable(new_data)
     })
+    
+  })
 }
 
 
