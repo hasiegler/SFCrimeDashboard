@@ -4,7 +4,7 @@ library(leaflet)
 
 
 df <- read.socrata(
-  "https://data.sfgov.org/resource/wg3w-h783.json?incident_date=2022-02-11"
+  "https://data.sfgov.org/resource/wg3w-h783.json?incident_date=2023-02-18&incident_category=Larceny Theft"
 )
 
 df <- df %>% 
@@ -14,6 +14,21 @@ df <- df %>%
 leaflet(data = df) %>% 
   addTiles() %>% 
   addMarkers(~longitude, ~latitude)
+
+
+
+df <- read.socrata(
+  "https://data.sfgov.org/resource/wg3w-h783.json?$where=incident_date between '2022-10-01' and '2023-02-15'"
+)
+
+all <- df %>% 
+  count(incident_category, sort = TRUE) %>% 
+  pull(incident_category)
+
+for (i in all){
+  print(i)
+}
+
 
 
 
