@@ -4,7 +4,7 @@ library(RSocrata)
 library(leaflet)
 library(DT)
 
-yesterday_df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", Sys.Date() - 1))
+yesterday_df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", Sys.Date() - 2))
 
 
 yesterday_df <- yesterday_df %>% 
@@ -45,8 +45,16 @@ popups <- paste("<strong>", "<font size='+0.2'>", yesterday_df$incident_descript
                 "<strong>", "Incident ID: ", "</strong>", yesterday_df$incident_id,
                 sep = "")
 
+yesterday_incident_categories <- yesterday_df %>%
+  count(incident_category, sort = TRUE) %>%
+  pull(incident_category)
+
+
+
 # Define UI for application
 ui <- bootstrapPage(
+  
+  
   tags$head(
     tags$link(href = "https://fonts.googleapis.com/css?family=Oswald", rel = "stylesheet"),
     tags$style(type = "text/css", "
@@ -63,51 +71,58 @@ ui <- bootstrapPage(
   navbarPage("San Francisco Crimes", id="nav",
              
              tabPanel("Interactive Map",
-                      
-                      leafletOutput("map"),
+                      div(class="outer",
+                          
+                          tags$head(
+                            
+                            includeCSS("style.css")
+                          ),
+                
+                      leafletOutput("map", width = "100%", height = "100%"),
                       
                       absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                                    draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
+                                    draggable = TRUE, top = 80, left = 50, right = 20, bottom = "auto",
                                     width = 330, height = "auto",
                                     
-                                    h2("Choose Date and Category"),
+                                    h2("Filter Incidents by Date and Incident Category"),
                                     
                                     dateInput("date",
                                               label = "Choose Date",
-                                              value = Sys.Date() - 1,
+                                              value = Sys.Date() - 2,
                                               min = "2018-01-01",
-                                              max = Sys.Date() - 1),
+                                              max = Sys.Date() - 2),
                                     
-                                    selectInput("select_incident_category",
+                                    conditionalPanel(condition = "input.all_incidents == 0",
+                                    selectInput("incident_type",
                                                 label = "Choose Incident Category",
                                                 choices = c("Larceny Theft",
                                                             "Malicious Mischief",
-                                                            "Motor Vehicle Theft",
                                                             "Assault",
+                                                            "Motor Vehicle Theft",
                                                             "Other Miscellaneous",
                                                             "Non-Criminal",
                                                             "Burglary",
                                                             "Recovered Vehicle",
-                                                            "Drug Offense",
                                                             "Fraud",
-                                                            "Warrant",
+                                                            "Drug Offense",
                                                             "Lost Property",
+                                                            "Warrant",
                                                             "Robbery",
-                                                            "Missing Person",
                                                             "Suspicious Occ",
+                                                            "Missing Person",
                                                             "Disorderly Conduct",
-                                                            "Miscellaneous Investigation",
                                                             "Offences Against The Family And Children",
+                                                            "Miscellaneous Investigation",
                                                             "Other",
                                                             "Other Offenses",
                                                             "Weapons Offense",
-                                                            "Traffic Violation Arrest",
                                                             "Weapons Carrying Etc",
+                                                            "Traffic Violation Arrest",
                                                             "Stolen Property",
-                                                            "Traffic Collision",
+                                                            "Courtesy Report",
                                                             "Arson",
                                                             "Vandalism",
-                                                            "Courtesy Report",
+                                                            "Traffic Collision",
                                                             "Case Closure",
                                                             "Forgery And Counterfeiting",
                                                             "Fire Report",
@@ -115,19 +130,23 @@ ui <- bootstrapPage(
                                                             "Sex Offense",
                                                             "Suicide",
                                                             "Vehicle Impounded",
+                                                            "Drug Violation",
                                                             "Vehicle Misplaced",
                                                             "Homicide",
-                                                            "Prostitution",
-                                                            "Drug Violation",
-                                                            "Rape",
                                                             "Liquor Laws",
-                                                            "Motor Vehicle Theft?",
+                                                            "Prostitution",
+                                                            "Rape",
                                                             "Suspicious",
                                                             "Gambling",
-                                                            "Civil Sidewalks",
                                                             "Human Trafficking (A), Commercial Sex Acts",
-                                                            "Human Trafficking, Commercial Sex Acts"
-                                                            ))
+                                                            "Motor Vehicle Theft?",
+                                                            "Civil Sidewalks",
+                                                            "Human Trafficking, Commercial Sex Acts"))
+                                    ),
+                                    
+                                    checkboxInput("all_incidents", label = "Check Box to See All Incidents of Selected Date",
+                                                  value = TRUE)
+                      )
                       )
                           
               ),
@@ -135,7 +154,7 @@ ui <- bootstrapPage(
              
              tabPanel("Data Exploration",
                       strong("Testing"),
-                      dataTableOutput("new_data")
+                      plotOutput("testplot")
                
              )
   )
@@ -151,17 +170,14 @@ server <- function(input, output){
     as.character(input$date)
   })
   
-  selected_category <- reactive({
-    noquote(input$select_incident_category)
+
+  
+  df_day <- reactive({
+     read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", 
+                        selected_date()))
   })
   
-  df <- reactive({
-    read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", 
-                        selected_date(), 
-                        "&incident_category=", 
-                        selected_category()))
-  })
-  
+
   output$map <- renderLeaflet({
     leaflet(data = yesterday_df) %>% 
       addTiles() %>% 
@@ -170,62 +186,87 @@ server <- function(input, output){
                  popup = lapply(popups, HTML))
   })
   
+  
+  df_day_incident <- reactive({
+
+    if(input$all_incidents){
+      df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=",
+                            input$date))
+    } else{
+      df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=",
+                                input$date))
+      
+      df <- df %>% 
+        filter(incident_category == input$incident_type)
+    }
+    
+    return(df)
+  })
+  
 
   observe({
-    
-    df <- df() %>% 
+
+    df <- df_day_incident()
+
+    df <- df %>%
       mutate(longitude = as.numeric(longitude),
              latitude = as.numeric(latitude))
-  
-  
-  labels <- paste("<strong>", "<font size='+0.2'>", df$incident_description, "</font>", "</strong>",
-                  "<br>",
-                  "<strong>", "Incident Date: ", "</strong>", df$incident_date, 
-                  "<br>", 
-                  "<strong>", "Incident Time: ", "</strong>", df$incident_time,
-                  "<br>",
-                  "<strong>", "Incident Category: ", "</strong>", df$incident_category,
-                  "<br>",
-                  "Click for More Information",
-                  sep = "")
-  
-  popups <- paste("<strong>", "<font size='+0.2'>", df$incident_description, "</font>", "</strong>",
-                  "<br>",
-                  "<strong>", "Incident Date: ", "</strong>", df$incident_date, 
-                  "<br>", 
-                  "<strong>", "Incident Time: ", "</strong>", df$incident_time,
-                  "<br>",
-                  "<strong>", "Incident Category: ", "</strong>", df$incident_category,
-                  "<br>",
-                  "<strong>", "Report Datetime: ", "</strong>", df$report_datetime,
-                  "<br>",
-                  "<strong>", "Resolution: ", "</strong>", df$resolution,
-                  "<br>",
-                  "<strong>", "Intersection: ", "</strong>", df$intersection,
-                  "<br>",
-                  "<strong>", "Neighborhood: ", "</strong>", df$analysis_neighborhood,
-                  "<br>",
-                  "<strong>", "Incident ID: ", "</strong>", df$incident_id,
-                  sep = "")
 
-    leafletProxy("map", data = df) %>% 
-      addTiles() %>% 
-      clearMarkers() %>% 
+
+    labels <- paste("<strong>", "<font size='+0.2'>", df$incident_description, "</font>", "</strong>",
+                    "<br>",
+                    "<strong>", "Incident Date: ", "</strong>", df$incident_date,
+                    "<br>",
+                    "<strong>", "Incident Time: ", "</strong>", df$incident_time,
+                    "<br>",
+                    "<strong>", "Incident Category: ", "</strong>", df$incident_category,
+                    "<br>",
+                    "Click for More Information",
+                    sep = "")
+
+    popups <- paste("<strong>", "<font size='+0.2'>", df$incident_description, "</font>", "</strong>",
+                    "<br>",
+                    "<strong>", "Incident Date: ", "</strong>", df$incident_date,
+                    "<br>",
+                    "<strong>", "Incident Time: ", "</strong>", df$incident_time,
+                    "<br>",
+                    "<strong>", "Incident Category: ", "</strong>", df$incident_category,
+                    "<br>",
+                    "<strong>", "Report Datetime: ", "</strong>", df$report_datetime,
+                    "<br>",
+                    "<strong>", "Resolution: ", "</strong>", df$resolution,
+                    "<br>",
+                    "<strong>", "Intersection: ", "</strong>", df$intersection,
+                    "<br>",
+                    "<strong>", "Neighborhood: ", "</strong>", df$analysis_neighborhood,
+                    "<br>",
+                    "<strong>", "Incident ID: ", "</strong>", df$incident_id,
+                    sep = "")
+
+    leafletProxy("map", data = df) %>%
+      addTiles() %>%
+      clearMarkers() %>%
       addMarkers(~longitude, ~latitude,
                  label = lapply(labels, HTML),
                  popup = lapply(popups, HTML))
-    
+
   })
- 
-  
-  observe({
-    new_data <- df()
+
+
+  output$testplot <- renderPlot({
     
-    output$new_data <- renderDataTable({
-      datatable(new_data)
-    })
+    df <- df_day() %>% 
+      filter(incident_category == input$incident_type)
     
+    
+    
+    df %>% 
+      ggplot(aes(x = analysis_neighborhood)) + 
+      geom_bar() + 
+      coord_flip()
+      
   })
+    
 }
 
 

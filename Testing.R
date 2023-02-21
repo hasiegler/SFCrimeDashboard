@@ -18,16 +18,30 @@ leaflet(data = df) %>%
 
 
 df <- read.socrata(
-  "https://data.sfgov.org/resource/wg3w-h783.json?$where=incident_date between '2022-10-01' and '2023-02-15'"
-)
+  "https://data.sfgov.org/resource/wg3w-h783.json?$where=incident_date between '2022-06-01' and '2023-02-15'")
+
+
+
 
 all <- df %>% 
   count(incident_category, sort = TRUE) %>% 
   pull(incident_category)
 
+print()
+
 for (i in all){
   print(i)
 }
+
+test <- yesterday_df %>% 
+  filter(incident_category == "Larceny Theft")
+
+test %>% 
+  ggplot(aes(x=analysis_neighborhood)) + 
+  geom_bar()
+
+
+
 
 
 
