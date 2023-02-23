@@ -6,7 +6,11 @@ library(lubridate)
 library(treemapify)
 
 df <- read.socrata(
-  "https://data.sfgov.org/resource/wg3w-h783.json?$where=incident_date between '2023-01-18' and '2023-02-01'"
+  "https://data.sfgov.org/resource/wg3w-h783.json?analysis_neigborhood=Tenderloin&$where=incident_date between '2023-01-18' and '2023-02-01'"
+)
+
+df <- read.socrata(
+  "https://data.sfgov.org/resource/wg3w-h783.json?analysis_neigborhood=Tenderloin"
 )
 
 tag.map.title <- tags$style(HTML("
@@ -89,7 +93,7 @@ test %>%
 
 
 df <- read.socrata(
-  "https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&$where=incident_date between '2023-01-01' and '2023-02-01'"
+  "https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&analysis_neighborhood=Tenderloin&$where=incident_date between '2023-01-01' and '2023-02-01'"
 )
 
 
@@ -186,41 +190,17 @@ ggplotly(p, tooltip = "text")
 
 
 
-
-
-
-
-  
-  df5 <- data.frame(x = c("A", "B", "C", "D", "E"),
-                   y = c(5, 10, 15, 20, 25))
-  
-  # Create bar chart
-  ggplot(df5, aes(x = as.factor(x), y = y)) +
-    geom_col()
-
-
-
-
-
-
-df2 %>% 
+df <- read.socrata(
+  "https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&$where=incident_date between '2022-01-01' and '2023-02-01'"
+)
 
 df %>% 
-  count(incident_hour, incident_day_of_week, sort = TRUE)
+  count(analysis_neighborhood, sort = TRUE) %>% 
+  pull(analysis_neighborhood)
 
-df %>% 
-  ggplot(aes(x = as.factor(incident_hour))) + 
-  geom_bar()
 
-df %>% 
-  ggplot(aes(x = incident_day_of_week)) + 
-  geom_bar()
 
-df %>% 
-  filter(incident_hour == 1) %>% 
-  ggplot(aes(x = incident_category)) + 
-  geom_bar() + 
-  coord_flip()
+
 
 
 

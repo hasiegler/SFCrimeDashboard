@@ -5,6 +5,7 @@ library(leaflet)
 library(DT)
 library(leaflet.extras)
 library(lubridate)
+library(plotly)
 
 yesterday_df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", Sys.Date() - 2))
 
@@ -51,6 +52,97 @@ yesterday_incident_categories <- yesterday_df %>%
   count(incident_category, sort = TRUE) %>%
   pull(incident_category)
 
+all_incident_categories <- c("Larceny Theft",
+                             "Malicious Mischief",
+                             "Assault",
+                             "Motor Vehicle Theft",
+                             "Other Miscellaneous",
+                             "Non-Criminal",
+                             "Burglary",
+                             "Recovered Vehicle",
+                             "Fraud",
+                             "Drug Offense",
+                             "Lost Property",
+                             "Warrant",
+                             "Robbery",
+                             "Suspicious Occ",
+                             "Missing Person",
+                             "Disorderly Conduct",
+                             "Offences Against The Family And Children",
+                             "Miscellaneous Investigation",
+                             "Other",
+                             "Other Offenses",
+                             "Weapons Offense",
+                             "Weapons Carrying Etc",
+                             "Traffic Violation Arrest",
+                             "Stolen Property",
+                             "Courtesy Report",
+                             "Arson",
+                             "Vandalism",
+                             "Traffic Collision",
+                             "Case Closure",
+                             "Forgery And Counterfeiting",
+                             "Fire Report",
+                             "Embezzlement",
+                             "Sex Offense",
+                             "Suicide",
+                             "Vehicle Impounded",
+                             "Drug Violation",
+                             "Vehicle Misplaced",
+                             "Homicide",
+                             "Liquor Laws",
+                             "Prostitution",
+                             "Rape",
+                             "Suspicious",
+                             "Gambling",
+                             "Human Trafficking (A), Commercial Sex Acts",
+                             "Motor Vehicle Theft?",
+                             "Civil Sidewalks",
+                             "Human Trafficking, Commercial Sex Acts")
+
+
+all_neighborhoods <- c("Tenderloin",                  
+                       "South of Market",               
+                       "Mission",                       
+                       "Financial District/South Beach",
+                       "Bayview Hunters Point",         
+                       "Western Addition",              
+                       "Nob Hill",                     
+                       "Castro/Upper Market",           
+                       "Marina",                        
+                       "North Beach",
+                       "Mission Bay",                   
+                       "Outer Richmond",                
+                       "Sunset/Parkside",               
+                       "Bernal Heights",                
+                       "Hayes Valley",                  
+                       "Outer Mission",                 
+                       "West of Twin Peaks",          
+                       "Chinatown",                     
+                       "Potrero Hill",                  
+                       "Pacific Heights",               
+                       "Russian Hill",                  
+                       "Excelsior",                     
+                       "Visitacion Valley",             
+                       "Lone Mountain/USF",             
+                       "Portola",                       
+                       "Oceanview/Merced/Ingleside",    
+                       "Haight Ashbury",                
+                       "Inner Richmond",                
+                       "Lakeshore",                    
+                       "Noe Valley",                    
+                       "Inner Sunset",                  
+                       "Golden Gate Park",              
+                       "Japantown",                     
+                       "Glen Park",                    
+                       "Presidio Heights",              
+                       "Twin Peaks",                    
+                       "Treasure Island",               
+                       "McLaren Park",                  
+                       "Seacliff",                      
+                       "Presidio",                      
+                       "Lincoln Park")
+
 
 
 
@@ -67,20 +159,6 @@ month_years <- paste(months_words, years)
 
 # Define UI for application
 ui <- bootstrapPage(
-  
-  
-  tags$head(
-    tags$link(href = "https://fonts.googleapis.com/css?family=Oswald", rel = "stylesheet"),
-    tags$style(type = "text/css", "
-      html, body {
-        width: 100%;
-        height: 100%;
-        font-family: Oswald, sans-serif;
-        margin: 0;
-        padding: 0;
-      }
-    ")
-  ),
   
   navbarPage("San Francisco Crimes", id="nav",
              
@@ -109,53 +187,7 @@ ui <- bootstrapPage(
                                     conditionalPanel(condition = "input.all_incidents == 0",
                                     selectInput("incident_type",
                                                 label = "Choose Incident Category",
-                                                choices = c("Larceny Theft",
-                                                            "Malicious Mischief",
-                                                            "Assault",
-                                                            "Motor Vehicle Theft",
-                                                            "Other Miscellaneous",
-                                                            "Non-Criminal",
-                                                            "Burglary",
-                                                            "Recovered Vehicle",
-                                                            "Fraud",
-                                                            "Drug Offense",
-                                                            "Lost Property",
-                                                            "Warrant",
-                                                            "Robbery",
-                                                            "Suspicious Occ",
-                                                            "Missing Person",
-                                                            "Disorderly Conduct",
-                                                            "Offences Against The Family And Children",
-                                                            "Miscellaneous Investigation",
-                                                            "Other",
-                                                            "Other Offenses",
-                                                            "Weapons Offense",
-                                                            "Weapons Carrying Etc",
-                                                            "Traffic Violation Arrest",
-                                                            "Stolen Property",
-                                                            "Courtesy Report",
-                                                            "Arson",
-                                                            "Vandalism",
-                                                            "Traffic Collision",
-                                                            "Case Closure",
-                                                            "Forgery And Counterfeiting",
-                                                            "Fire Report",
-                                                            "Embezzlement",
-                                                            "Sex Offense",
-                                                            "Suicide",
-                                                            "Vehicle Impounded",
-                                                            "Drug Violation",
-                                                            "Vehicle Misplaced",
-                                                            "Homicide",
-                                                            "Liquor Laws",
-                                                            "Prostitution",
-                                                            "Rape",
-                                                            "Suspicious",
-                                                            "Gambling",
-                                                            "Human Trafficking (A), Commercial Sex Acts",
-                                                            "Motor Vehicle Theft?",
-                                                            "Civil Sidewalks",
-                                                            "Human Trafficking, Commercial Sex Acts"))
+                                                choices = all_incident_categories)
                                     ),
                                     
                                     checkboxInput("all_incidents", label = "Check Box to See All Incidents of Selected Date",
@@ -194,7 +226,7 @@ ui <- bootstrapPage(
                         column(12,
                                tags$h1("Select Month for Analysis", class = "text-center",
                                        style = "font-size: 36px;"),
-                               tags$h4("Only Using Incidents that were marked as 'Cite or Arrest Adult' at Time of Report",
+                               tags$h6("Only Using Incidents that were marked as 'Cite or Arrest Adult' at Time of Report",
                                       class = "text-center"),
                                selectInput("select_month2", label = "Select Month",
                                            choices = month_years)
@@ -205,12 +237,16 @@ ui <- bootstrapPage(
                       tags$hr(),
 
                       fluidRow(column(width = 6,
-                                      strong("Select A NeighborHood In San Francisco"),
-
+                                      tags$h6("Single NeighborHood In San Francisco",
+                                              class = "text-center"),
+                                      selectInput(inputId = "select_neighborhood",
+                                                  label = "Select A Neighborhood",
+                                                  choices = all_neighborhoods)
                                       ),
 
                                column(width = 6,
-                                      strong("San Francisco as a Whole"),
+                                      tags$h6("San Francisco as a Whole",
+                                              class = "text-center"),
                                       plotlyOutput("incident_counts")
                                       )
                                ),
@@ -221,16 +257,14 @@ ui <- bootstrapPage(
 
                         column(width = 6,
                                plotlyOutput("hour_day")
+                               )
                         )
-                      )
-                      )
-
+                      ),
              
+             tabPanel("Incident Search",
+                      dataTableOutput("data"))
+             )
   )
-  
-
-  
-)
 
 # Define server logic required to draw a histogram
 server <- function(input, output){
@@ -429,9 +463,9 @@ server <- function(input, output){
     
   })
   
-  
-  
   #################
+  
+  
   
   selected_month_data2 <- reactive({
     
@@ -450,6 +484,33 @@ server <- function(input, output){
                         "'"
     ))
     
+  })
+  
+  
+  selected_neighborhood_data <- reactive({
+    
+    month_year_selected <- str_split(input$select_month2, " ")
+    month_name_selected <- month_year_selected[[1]][1]
+    year_selected <- month_year_selected[[1]][2]
+    date_selected <- as.Date(str_replace_all(paste(year_selected, "-", month_name_selected, "-", "01"), " ",""), format = "%Y-%B-%d")
+    
+    read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&",
+                        "analysis_neighborhood=",
+                        input$select_neighborhood,
+                        "&$where=incident_date between ",
+                        "'",
+                        date_selected, 
+                        "' ",
+                        "and ",
+                        "'",
+                        date_selected + 33,
+                        "'")
+                 )
+    
+  })
+  
+  output$data <- renderDataTable({
+    selected_neighborhood_data()
   })
   
   output$incident_counts <- renderPlotly({
