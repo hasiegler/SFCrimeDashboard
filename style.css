@@ -4,31 +4,21 @@ input[type="number"] {
 
 div.outer {
   position: fixed;
-  top: 41px;
+  top: 50px !important;
   left: 0;
   right: 0;
   bottom: 0;
   overflow: hidden;
   padding: 0;
+  z-index: 1; /* add z-index property with a lower value */
 }
 
-/* Customize fonts */
-body, label, input, button, select { 
-  font-family: 'Helvetica Neue', Helvetica;
-  font-weight: 200;
-}
-h1, h2, h3, h4 { font-weight: 400; }
-
-
-/* Position and style citation */
-#cite {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  font-size: 12px;
+.navbar {
+  z-index: 2; /* add z-index property with a higher value */
 }
 
-/* If not using map tiles, show a white background */
-.leaflet-container {
-  background-color: white !important;
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }

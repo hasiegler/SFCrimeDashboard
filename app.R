@@ -159,16 +159,15 @@ month_years <- paste(months_words, years)
 
 # Define UI for application
 ui <- bootstrapPage(
-  
-  tags$head(tags$link(rel="shortcut icon", href="https://github.com/hasiegler/SFCrimeDashboard/blob/master/favicon.png?raw")),
+  theme = bslib::bs_theme(bootswatch = "yeti"),
   
   navbarPage("San Francisco Crimes", id="nav",
              
              tabPanel("Interactive Map",
                       div(class="outer",
-                          
+
                           tags$head(
-                            
+
                             includeCSS("style.css")
                           ),
                 
@@ -230,48 +229,63 @@ ui <- bootstrapPage(
                                        style = "font-size: 36px;"),
                                tags$h6("Only Using Incidents that were marked as 'Cite or Arrest Adult' at Time of Report",
                                       class = "text-center"),
-                               selectInput("select_month2", label = "Select Month",
+                               div(class="column",
+                                   
+                                   tags$head(
+                                     
+                                     includeCSS("style.css")
+                                   ),
+                               selectInput("select_month2",
+                                           label = NULL,
                                            choices = month_years)
-                        ),
-
+                        )
                       ),
 
                       tags$hr(),
 
                       fluidRow(column(width = 6,
-                                      tags$h6("Single NeighborHood In San Francisco",
+                                      tags$h4("Single NeighborHood In San Francisco",
                                               class = "text-center"),
+                                      tags$h6("Select a Neighborhood",
+                                              class = "text-center"),
+                                      
+                                     
                                       selectInput(inputId = "select_neighborhood",
-                                                  label = "Select A Neighborhood",
+                                                  label = NULL,
                                                   choices = all_neighborhoods)
                                       ),
 
                                column(width = 6,
-                                      tags$h6("San Francisco as a Whole",
+                                      tags$h4("San Francisco as a Whole",
                                               class = "text-center")
                                )
                                ),
+                      tags$hr(),
                                
                       fluidRow(column(width = 6,
-                                      plotlyOutput("incident_counts_neighborhood")),
+                                      plotlyOutput("incident_counts_neighborhood", height = "600px")),
                                
                                column(width = 6,
-                                      plotlyOutput("incident_counts"))
+                                      plotlyOutput("incident_counts", height = "600px"))
                                ),
+                      
+                      tags$hr(),
 
                       fluidRow(
                         column(width = 6,
-                               plotlyOutput("hour_day_neighborhood")
+                               plotlyOutput("hour_day_neighborhood", height = "500px")
                                ),
 
                         column(width = 6,
-                               plotlyOutput("hour_day")
+                               plotlyOutput("hour_day", height = "500px")
                                )
                         ),
                       
+                      tags$hr(),
+                      
                       fluidRow(
-                        plotlyOutput("neighborhood_counts")
-                      )
+                        plotlyOutput("neighborhood_counts", height = "600px")
+                      ))
                       
                       
                       
@@ -539,6 +553,8 @@ server <- function(input, output){
     df <- selected_month_data2()
     
     cats <- df %>% 
+      select(incident_category) %>% 
+      drop_na() %>% 
       count(incident_category, sort = TRUE)
     
     p <- ggplot(cats, aes(x = reorder(incident_category, n),
@@ -546,7 +562,7 @@ server <- function(input, output){
       geom_segment(aes(xend = incident_category,
                        yend = 0),
                    color = "gray") + 
-      geom_point(aes(text = paste(incident_category, "Count: ", n)),
+      geom_point(aes(text = paste(incident_category, "Count:", n)),
                  color = "red",
                  size = 2) + 
       coord_flip() + 
@@ -564,6 +580,8 @@ server <- function(input, output){
     df <- selected_neighborhood_data()
     
     cats <- df %>% 
+      select(incident_category) %>% 
+      drop_na() %>% 
       count(incident_category, sort = TRUE)
     
     p <- ggplot(cats, aes(x = reorder(incident_category, n),
@@ -571,7 +589,7 @@ server <- function(input, output){
       geom_segment(aes(xend = incident_category,
                        yend = 0),
                    color = "gray") + 
-      geom_point(aes(text = paste(incident_category, "Count: ", n)),
+      geom_point(aes(text = paste(incident_category, "Count:", n)),
                  color = "red",
                  size = 2) + 
       coord_flip() + 
@@ -603,19 +621,21 @@ server <- function(input, output){
     
     full_df <- full_df %>% 
       mutate(incident_hour_format = strftime(strptime(sprintf("%02d", incident_hour), format = "%H"), format = "%I %p"),
-             incident_hour_format = gsub("^0", "", incident_hour_format))
+             incident_hour_format = gsub("^0", "", incident_hour_format),
+             incident_hour_format = gsub(" ", "", incident_hour_format))
     
     p <- full_df %>% 
       ggplot(aes(x = as.factor(incident_hour),
-                 y = number)) + 
-      geom_col(aes(text = paste("Most Common Incident Category:", 
-                                incident_category,
-                                "\nCount:",
-                                n))) +
+                 y = number,
+                 fill = "lightblue")) + 
+      geom_col(aes(text = paste("Most Common Incident Category:\n",
+                                incident_category))) +
       theme_minimal() + 
       xlab("Hour of the Day") + 
       ylab("Number of Incidents") + 
-      scale_x_discrete(labels = full_df$incident_hour_format)
+      scale_x_discrete(labels = full_df$incident_hour_format) + 
+      theme(axis.text.x = element_text(size = 6),
+            legend.position = "none")
     
     ggplotly(p, tooltip = "text")
     
@@ -641,19 +661,21 @@ server <- function(input, output){
     
     full_df <- full_df %>% 
       mutate(incident_hour_format = strftime(strptime(sprintf("%02d", incident_hour), format = "%H"), format = "%I %p"),
-             incident_hour_format = gsub("^0", "", incident_hour_format))
+             incident_hour_format = gsub("^0", "", incident_hour_format),
+             incident_hour_format = gsub(" ", "", incident_hour_format))
     
     p <- full_df %>% 
       ggplot(aes(x = as.factor(incident_hour),
-                 y = number)) + 
-      geom_col(aes(text = paste("Most Common Incident Category:", 
-                                incident_category,
-                                "\nCount:",
-                                n))) +
+                 y = number,
+                 fill = "lightblue")) + 
+      geom_col(aes(text = paste("Most Common Incident Category:\n",
+                                incident_category))) +
       theme_minimal() + 
       xlab("Hour of the Day") + 
       ylab("Number of Incidents") + 
-      scale_x_discrete(labels = full_df$incident_hour_format)
+      scale_x_discrete(labels = full_df$incident_hour_format) + 
+      theme(axis.text.x = element_text(size = 6),
+            legend.position = "none")
     
     ggplotly(p, tooltip = "text")
     
@@ -682,7 +704,9 @@ server <- function(input, output){
       theme_minimal() + 
       xlab("") + 
       ylab("Number of Incidents") + 
-      theme(axis.text.y = element_text(size = 6))
+      labs(title = "Incident Count by Neighborhood") + 
+      theme(axis.text.y = element_text(size = 6),
+            plot.title = element_text(hjust = 0.5))
     
     ggplotly(p, tooltip = "text")
     
