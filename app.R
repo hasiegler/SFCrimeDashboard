@@ -160,6 +160,8 @@ month_years <- paste(months_words, years)
 # Define UI for application
 ui <- bootstrapPage(
   
+  tags$head(tags$link(rel="shortcut icon", href="https://github.com/hasiegler/SFCrimeDashboard/blob/master/favicon.png?raw")),
+  
   navbarPage("San Francisco Crimes", id="nav",
              
              tabPanel("Interactive Map",
