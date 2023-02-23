@@ -1,0 +1,13 @@
+name: SFCrimeDashboard
+title: SFCrimeDashboard
+username:
+account: hasiegler
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8387044
+bundleId: 6876569
+url: https://hasiegler.shinyapps.io/SFCrimeDashboard/
+when: 1677104492.16906
+lastSyncTime: 1677104492.16908
+asMultiple: FALSE
+asStatic: FALSE
