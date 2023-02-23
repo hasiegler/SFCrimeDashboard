@@ -65,7 +65,12 @@ leaflet(data = df) %>%
 
 
 df <- read.socrata(
-  "https://data.sfgov.org/resource/wg3w-h783.json?$where=incident_date between '2022-06-01' and '2023-02-15'")
+  "https://data.sfgov.org/resource/wg3w-h783.json?$where=incident_date between '2023-01-01' and '2023-02-15'")
+
+df %>% 
+  ggplot(aes(x = analysis_neighborhood)) + 
+  geom_bar() + 
+  coord_flip()
 
 
 
@@ -93,8 +98,37 @@ test %>%
 
 
 df <- read.socrata(
-  "https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&analysis_neighborhood=Tenderloin&$where=incident_date between '2023-01-01' and '2023-02-01'"
+  "https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&$where=incident_date between '2023-01-01' and '2023-02-01'"
 )
+
+
+cats <- df %>% 
+  select(analysis_neighborhood) %>% 
+  drop_na() %>% 
+  count(analysis_neighborhood, sort = TRUE)
+
+p <- ggplot(cats, aes(x = reorder(analysis_neighborhood, n),
+                      y = n)) +
+  geom_segment(aes(xend = analysis_neighborhood,
+                   yend = 0),
+               color = "gray") + 
+  geom_point(aes(text = paste(analysis_neighborhood, "Count: ", n)),
+             color = "red",
+             size = 2) + 
+  coord_flip() + 
+  theme_minimal() + 
+  xlab("") + 
+  ylab("Number of Incidents") + 
+  theme(axis.text.y = element_text(size = 6))
+
+ggplotly(p, tooltip = "text")
+
+
+
+
+
+
+
 
 
 df %>% 

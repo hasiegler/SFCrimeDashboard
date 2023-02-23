@@ -246,19 +246,35 @@ ui <- bootstrapPage(
 
                                column(width = 6,
                                       tags$h6("San Francisco as a Whole",
-                                              class = "text-center"),
-                                      plotlyOutput("incident_counts")
-                                      )
+                                              class = "text-center")
+                               )
+                               ),
+                               
+                      fluidRow(column(width = 6,
+                                      plotlyOutput("incident_counts_neighborhood")),
+                               
+                               column(width = 6,
+                                      plotlyOutput("incident_counts"))
                                ),
 
                       fluidRow(
                         column(width = 6,
-                               strong("test")),
+                               plotlyOutput("hour_day_neighborhood")
+                               ),
 
                         column(width = 6,
                                plotlyOutput("hour_day")
                                )
-                        )
+                        ),
+                      
+                      fluidRow(
+                        plotlyOutput("neighborhood_counts")
+                      )
+                      
+                      
+                      
+                      
+                      
                       ),
              
              tabPanel("Incident Search",
@@ -368,6 +384,7 @@ server <- function(input, output){
   month_name_selected <- month_year_selected[[1]][1]
   year_selected <- month_year_selected[[1]][2]
   date_selected <- as.Date(str_replace_all(paste(year_selected, "-", month_name_selected, "-", "01"), " ",""), format = "%Y-%B-%d")
+  last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
   
   read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&$where=incident_date between ",
                       "'",
@@ -375,7 +392,7 @@ server <- function(input, output){
                       "' ",
                       "and ",
                       "'",
-                      date_selected + 33,
+                      last_day_month,
                       "'"
                       ))
   
@@ -473,6 +490,7 @@ server <- function(input, output){
     month_name_selected <- month_year_selected[[1]][1]
     year_selected <- month_year_selected[[1]][2]
     date_selected <- as.Date(str_replace_all(paste(year_selected, "-", month_name_selected, "-", "01"), " ",""), format = "%Y-%B-%d")
+    last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
     
     read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&$where=incident_date between ",
                         "'",
@@ -480,7 +498,7 @@ server <- function(input, output){
                         "' ",
                         "and ",
                         "'",
-                        date_selected + 33,
+                        last_day_month,
                         "'"
     ))
     
@@ -493,6 +511,7 @@ server <- function(input, output){
     month_name_selected <- month_year_selected[[1]][1]
     year_selected <- month_year_selected[[1]][2]
     date_selected <- as.Date(str_replace_all(paste(year_selected, "-", month_name_selected, "-", "01"), " ",""), format = "%Y-%B-%d")
+    last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
     
     read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&",
                         "analysis_neighborhood=",
@@ -503,7 +522,7 @@ server <- function(input, output){
                         "' ",
                         "and ",
                         "'",
-                        date_selected + 33,
+                        last_day_month,
                         "'")
                  )
     
@@ -536,6 +555,30 @@ server <- function(input, output){
     
     ggplotly(p, tooltip = "text")
   
+  })
+  
+  output$incident_counts_neighborhood <- renderPlotly({
+    
+    df <- selected_neighborhood_data()
+    
+    cats <- df %>% 
+      count(incident_category, sort = TRUE)
+    
+    p <- ggplot(cats, aes(x = reorder(incident_category, n),
+                          y = n)) +
+      geom_segment(aes(xend = incident_category,
+                       yend = 0),
+                   color = "gray") + 
+      geom_point(aes(text = paste(incident_category, "Count: ", n)),
+                 color = "red",
+                 size = 2) + 
+      coord_flip() + 
+      theme_minimal() + 
+      xlab("") + 
+      ylab("Number of Incidents") + 
+      theme(axis.text.y = element_text(size = 6))
+    
+    ggplotly(p, tooltip = "text")
   })
   
   output$hour_day <- renderPlotly({
@@ -571,6 +614,73 @@ server <- function(input, output){
       xlab("Hour of the Day") + 
       ylab("Number of Incidents") + 
       scale_x_discrete(labels = full_df$incident_hour_format)
+    
+    ggplotly(p, tooltip = "text")
+    
+  })
+  
+  output$hour_day_neighborhood <- renderPlotly({
+    
+    df <- selected_neighborhood_data()
+    
+    df_most_common_incident <- df %>% 
+      mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>% 
+      group_by(incident_hour) %>% 
+      count(incident_category, sort = TRUE) %>% 
+      group_by(incident_hour) %>% 
+      slice(which.max(n))
+    
+    df_count_hour <- df %>% 
+      mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>% 
+      count(incident_hour) %>% 
+      rename(number = n)
+    
+    full_df <- full_join(df_count_hour, df_most_common_incident, by = "incident_hour")
+    
+    full_df <- full_df %>% 
+      mutate(incident_hour_format = strftime(strptime(sprintf("%02d", incident_hour), format = "%H"), format = "%I %p"),
+             incident_hour_format = gsub("^0", "", incident_hour_format))
+    
+    p <- full_df %>% 
+      ggplot(aes(x = as.factor(incident_hour),
+                 y = number)) + 
+      geom_col(aes(text = paste("Most Common Incident Category:", 
+                                incident_category,
+                                "\nCount:",
+                                n))) +
+      theme_minimal() + 
+      xlab("Hour of the Day") + 
+      ylab("Number of Incidents") + 
+      scale_x_discrete(labels = full_df$incident_hour_format)
+    
+    ggplotly(p, tooltip = "text")
+    
+  })
+  
+  
+  
+  output$neighborhood_counts <- renderPlotly({
+    
+    df <- selected_month_data2()
+    
+    cats <- df %>% 
+      select(analysis_neighborhood) %>% 
+      drop_na() %>% 
+      count(analysis_neighborhood, sort = TRUE)
+    
+    p <- ggplot(cats, aes(x = reorder(analysis_neighborhood, n),
+                          y = n)) +
+      geom_segment(aes(xend = analysis_neighborhood,
+                       yend = 0),
+                   color = "gray") + 
+      geom_point(aes(text = paste(analysis_neighborhood, "Count: ", n)),
+                 color = "red",
+                 size = 2) + 
+      coord_flip() + 
+      theme_minimal() + 
+      xlab("") + 
+      ylab("Number of Incidents") + 
+      theme(axis.text.y = element_text(size = 6))
     
     ggplotly(p, tooltip = "text")
     
