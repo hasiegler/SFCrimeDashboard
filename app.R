@@ -216,12 +216,14 @@ ui <- bootstrapPage(
                                       
                                         
                       selectInput("select_month", label = "Select Month",
-                                  choices = month_years)
+                                  choices = month_years),
+                      
+                      h6("Only Using Incidents that were marked as 'Cite or Arrest Adult' at Time of Report")
                       
                           )
                )),
              
-             tabPanel("Crime Type and Time Analysis",
+             tabPanel("Crime Analysis",
 
                       fluidRow(
                         column(12,
@@ -293,9 +295,77 @@ ui <- bootstrapPage(
                       
                       ),
              
-             tabPanel("Incident Search",
-                      dataTableOutput("data"))
-             )
+             tabPanel("Crime Data Table",
+                      
+                      fluidRow(
+                        column(12,
+                               tags$h1("Search for Individual Crimes", class = "text-center",
+                                       style = "font-size: 36px;"),
+                               tags$h6("Only Using Incidents that were marked as 'Cite or Arrest Adult' at Time of Report",
+                                       class = "text-center"),
+                               div(class="column",
+                                   
+                                   tags$head(
+                                     
+                                     includeCSS("style.css")
+                                   ),
+                                tags$h5("Filter by Month",
+                                        class = "text-center"),
+                                
+                                   selectInput("select_month_search",
+                                               label = NULL,
+                                               choices = month_years)
+                               ))
+                        ),
+                      
+                      
+                      fluidRow(
+                        column(12,
+                               div(class="column",
+                                   
+                                   tags$head(
+                                     
+                                     includeCSS("style.css")
+                                   ),
+                                   tags$h5("Filter by Neighborhood",
+                                           class = "text-center"),
+                                   
+                                   selectInput("select_neighborhood_search",
+                                               label = NULL,
+                                               choices = all_neighborhoods)
+                                   
+                                   
+                               ))
+                      ),
+                      
+                      tags$hr(),
+                      
+                      column(12,
+                      
+                      dataTableOutput("table_search")
+                      
+                      )
+                      
+                      
+              ),
+             
+             tabPanel("About",
+                      
+                      
+                      fluidRow(
+                        column(width = 12,
+                               
+                               tags$h1("About this App",
+                                       class = "text-center")
+                               
+                               
+                               
+                               
+                               )
+                      ))
+             
+             
+    )
   )
 
 # Define server logic required to draw a histogram
@@ -315,7 +385,7 @@ server <- function(input, output){
 
   output$map <- renderLeaflet({
     leaflet(data = yesterday_df) %>% 
-      addTiles() %>% 
+      addProviderTiles("CartoDB.Voyager") %>% 
       addMarkers(~longitude, ~latitude,
                  label = lapply(labels, HTML),
                  popup = lapply(popups, HTML))
@@ -379,7 +449,7 @@ server <- function(input, output){
                     sep = "")
 
     leafletProxy("map", data = df) %>%
-      addTiles() %>%
+      addProviderTiles("CartoDB.Voyager") %>%
       clearMarkers() %>%
       addMarkers(~longitude, ~latitude,
                  label = lapply(labels, HTML),
@@ -455,7 +525,7 @@ server <- function(input, output){
     ) 
     
     leaflet(data = df) %>% 
-      addTiles() %>% 
+      addProviderTiles("CartoDB.Voyager") %>% 
       addHeatmap(lng= ~longitude, lat = ~latitude, max = 5, radius = 40, blur = 25) %>% 
       addControl(title, position = "topright")
     
@@ -488,7 +558,7 @@ server <- function(input, output){
     ) 
     
     leafletProxy("map2", data = df) %>%
-      addTiles() %>%
+      addProviderTiles("CartoDB.Voyager") %>%
       clearHeatmap() %>% 
       addHeatmap(lng= ~longitude, lat = ~latitude, max = 5, radius = 40, blur = 25) %>% 
       clearControls() %>% 
@@ -542,10 +612,6 @@ server <- function(input, output){
                         "'")
                  )
     
-  })
-  
-  output$data <- renderDataTable({
-    selected_neighborhood_data()
   })
   
   output$incident_counts <- renderPlotly({
@@ -710,6 +776,39 @@ server <- function(input, output){
     
     ggplotly(p, tooltip = "text")
     
+  })
+  
+  
+  ############
+  
+  selected_neighborhood_data_search <- reactive({
+    
+    month_year_selected <- str_split(input$select_month_search, " ")
+    month_name_selected <- month_year_selected[[1]][1]
+    year_selected <- month_year_selected[[1]][2]
+    date_selected <- as.Date(str_replace_all(paste(year_selected, "-", month_name_selected, "-", "01"), " ",""), format = "%Y-%B-%d")
+    last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
+    
+    read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?resolution=Cite or Arrest Adult&",
+                        "analysis_neighborhood=",
+                        input$select_neighborhood_search,
+                        "&$where=incident_date between ",
+                        "'",
+                        date_selected, 
+                        "' ",
+                        "and ",
+                        "'",
+                        last_day_month,
+                        "'")
+    )
+    
+  })
+  
+  output$table_search <- renderDataTable({
+    df <- selected_neighborhood_data_search()
+    
+    df %>% 
+      datatable()
   })
   
   
