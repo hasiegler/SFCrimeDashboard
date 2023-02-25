@@ -1,110 +1,51 @@
-library(shiny)
-library(tidyverse)
-library(RSocrata)
-library(leaflet)
-library(DT)
-library(leaflet.extras)
-library(lubridate)
-library(plotly)
-
-yesterday_df <-
-  read.socrata(
-    paste0(
-      "https://data.sfgov.org/resource/wg3w-h783.json?incident_date=",
-      Sys.Date() - 2
-    )
-  )
+library(shiny)          # load the Shiny package for building web apps
+library(tidyverse)      # load the Tidyverse package for data wrangling and visualization
+library(RSocrata)       # load the RSocrata package for working with Socrata Open Data API
+library(leaflet)        # load the Leaflet package for interactive maps
+library(DT)             # load the DT package for interactive tables
+library(leaflet.extras) # load the Leaflet.Extras package for additional functionality
+library(lubridate)      # load the lubridate package for working with dates and times
+library(plotly)         # load the Plotly package for interactive plots
 
 
+# read the Socrata Open Data API endpoint for San Francisco incidents that occurred yesterday
+# using the RSocrata package and store it in yesterday_df
+yesterday_df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", 
+                                    Sys.Date() - 2))
+
+# convert the longitude and latitude columns from characters to numerics
 yesterday_df <- yesterday_df %>%
-  mutate(longitude = as.numeric(longitude),
-         latitude = as.numeric(latitude))
+  mutate(longitude = as.numeric(longitude), latitude = as.numeric(latitude))
 
-unique_incident_categories <- yesterday_df %>%
-  count(incident_category, sort = TRUE) %>%
+# store the unique incident categories in unique_incident_categories
+unique_incident_categories <- yesterday_df %>% 
+  count(incident_category, sort = TRUE) %>% 
   pull(incident_category)
 
-labels <-
-  paste(
-    "<strong>",
-    "<font size='+0.2'>",
-    yesterday_df$incident_description,
-    "</font>",
-    "</strong>",
-    "<br>",
-    "<strong>",
-    "Incident Date: ",
-    "</strong>",
-    yesterday_df$incident_date,
-    "<br>",
-    "<strong>",
-    "Incident Time: ",
-    "</strong>",
-    yesterday_df$incident_time,
-    "<br>",
-    "<strong>",
-    "Incident Category: ",
-    "</strong>",
-    yesterday_df$incident_category,
-    "<br>",
-    "Click for More Information",
-    sep = ""
-  )
+# create labels for the markers on the map, which include the incident description, date, time, and category
+labels <- paste("<strong>", "<font size='+0.2'>", yesterday_df$incident_description, "</font>", "</strong>", "<br>",
+                "<strong>", "Incident Date: ", "</strong>", yesterday_df$incident_date, "<br>",
+                "<strong>", "Incident Time: ", "</strong>", yesterday_df$incident_time, "<br>",
+                "<strong>", "Incident Category: ", "</strong>", yesterday_df$incident_category, "<br>",
+                "Click for More Information", sep = "")
 
-popups <-
-  paste(
-    "<strong>",
-    "<font size='+0.2'>",
-    yesterday_df$incident_description,
-    "</font>",
-    "</strong>",
-    "<br>",
-    "<strong>",
-    "Incident Date: ",
-    "</strong>",
-    yesterday_df$incident_date,
-    "<br>",
-    "<strong>",
-    "Incident Time: ",
-    "</strong>",
-    yesterday_df$incident_time,
-    "<br>",
-    "<strong>",
-    "Incident Category: ",
-    "</strong>",
-    yesterday_df$incident_category,
-    "<br>",
-    "<strong>",
-    "Report Datetime: ",
-    "</strong>",
-    yesterday_df$report_datetime,
-    "<br>",
-    "<strong>",
-    "Resolution: ",
-    "</strong>",
-    yesterday_df$resolution,
-    "<br>",
-    "<strong>",
-    "Intersection: ",
-    "</strong>",
-    yesterday_df$intersection,
-    "<br>",
-    "<strong>",
-    "Neighborhood: ",
-    "</strong>",
-    yesterday_df$analysis_neighborhood,
-    "<br>",
-    "<strong>",
-    "Incident ID: ",
-    "</strong>",
-    yesterday_df$incident_id,
-    sep = ""
-  )
+# create popups for the markers on the map, which include additional information about the incident
+popups <- paste("<strong>", "<font size='+0.2'>", yesterday_df$incident_description, "</font>", "</strong>", "<br>",
+                "<strong>", "Incident Date: ", "</strong>", yesterday_df$incident_date, "<br>",
+                "<strong>", "Incident Time: ", "</strong>", yesterday_df$incident_time, "<br>",
+                "<strong>", "Incident Category: ", "</strong>", yesterday_df$incident_category, "<br>",
+                "<strong>", "Report Datetime: ", "</strong>", yesterday_df$report_datetime, "<br>",
+                "<strong>", "Resolution: ", "</strong>", yesterday_df$resolution, "<br>",
+                "<strong>", "Intersection: ", "</strong>", yesterday_df$intersection, "<br>",
+                "<strong>", "Neighborhood: ", "</strong>", yesterday_df$analysis_neighborhood, "<br>",
+                "<strong>", "Incident ID: ", "</strong>", yesterday_df$incident_id, sep = "")
 
-yesterday_incident_categories <- yesterday_df %>%
-  count(incident_category, sort = TRUE) %>%
+# store the unique incident categories in yesterday_incident_categories
+yesterday_incident_categories <- yesterday_df %>% 
+  count(incident_category, sort = TRUE) %>% 
   pull(incident_category)
 
+# create a vector of all of the incident categories that have occurred in SF
 all_incident_categories <- c(
   "Assault",
   "Malicious Mischief",
@@ -155,7 +96,7 @@ all_incident_categories <- c(
   "Human Trafficking, Commercial Sex Acts"
 )
 
-
+# create a vector of all neighborhoods in SF
 all_neighborhoods <- c(
   "Tenderloin",
   "South of Market",
@@ -200,24 +141,44 @@ all_neighborhoods <- c(
   "Lincoln Park"
 )
 
-
-
-
+# earliest date in the SF database
 start_date <- as.Date('2018-01-01')
+
+# date with latest crime data
 end_date <- Sys.Date() - 2
+
+# create a vector of dates by month going from start date to end date
 dates <- seq(start_date, end_date, by = "month")
+
+# order the months in decreasing order
 dates <- sort(as.Date(dates), decreasing = TRUE)
+
+# create a vector of the number of the month for each date
 months_num <- format(dates, "%m")
+
+# create a vector of the name of the month for each date
 months_words <- format(dates, "%B")
+
+# create a vector of the year of the month for each date
 years <- format(dates, "%Y")
+
+# create a vecotr of the month in words and year for each date
 month_years <- paste(months_words, years)
+
+
+
+##################################
 
 
 
 # Define UI for application
 ui <- bootstrapPage(
+  
+  # add a theme 
   theme = bslib::bs_theme(bootswatch = "yeti"),
   
+  
+  # create a navigation bar at the top of the website
   navbarPage(
     "San Francisco Crimes",
     id = "nav",
@@ -289,15 +250,11 @@ ui <- bootstrapPage(
           width = 330,
           height = "auto",
           
-          
-          
-          selectInput("select_month", label = "Select Month",
+          selectInput("select_month", 
+                      label = "Select Month",
                       choices = month_years),
           
-          h6(
-            "Only Using Incidents that were marked as 'Cite or Arrest Adult' at Time of Report"
-          )
-          
+          h6("Only Using Incidents that were marked as 'Cite or Arrest Adult' at Time of Report")
         )
       )
     ),
@@ -333,7 +290,6 @@ ui <- bootstrapPage(
                     class = "text-center"),
             tags$h6("Select a Neighborhood",
                     class = "text-center"),
-            
             
             selectInput(
               inputId = "select_neighborhood",
@@ -374,11 +330,6 @@ ui <- bootstrapPage(
         
         fluidRow(plotlyOutput("neighborhood_counts", height = "600px"))
       )
-      
-      
-      
-      
-      
     ),
     
     tabPanel(
@@ -408,7 +359,6 @@ ui <- bootstrapPage(
         )
       )),
       
-      
       fluidRow(column(
         12,
         div(
@@ -431,15 +381,11 @@ ui <- bootstrapPage(
       tags$hr(),
       
       column(12,
-             
              dataTableOutput("table_search"))
-      
-      
     ),
     
     tabPanel("About",
-             
-             
+
              fluidRow(column(
                width = 12,
                
@@ -448,21 +394,30 @@ ui <- bootstrapPage(
                
                tags$h2("Contact"),
                
-               "Henry Siegler", tags$br(),
+               "Henry Siegler", 
                
-               "hsiegler@calpoly.edu", tags$br(),
+               tags$br(),
                
-               tags$a("LinkedIn", href = "https://www.linkedin.com/in/henrysiegler/"), tags$br(),
+               "hsiegler@calpoly.edu", 
+               
+               tags$br(),
+               
+               tags$a("LinkedIn", href = "https://www.linkedin.com/in/henrysiegler/"), 
+               
+               tags$br(),
                
                tags$a("GitHub", href = "https://hasiegler.github.io/Portfolio/"),
                
                tags$h2("Source"),
                
-               tags$a("DataSF: Police Department Incident Reports: 2018 to Present", href = "https://data.sfgov.org/Public-Safety/Police-Department-Incident-Reports-2018-to-Present/wg3w-h783"),
+               tags$a("DataSF: Police Department Incident Reports: 2018 to Present",
+                      href = "https://data.sfgov.org/Public-Safety/Police-Department-Incident-Reports-2018-to-Present/wg3w-h783"),
                
                tags$h2("Code"),
                
-               "This web application is written using the R Shiny web framework.", tags$br(),
+               "This web application is written using the R Shiny web framework.", 
+               
+               tags$br(),
                
                "Code used to generate this Shiny app are available on my", 
                
@@ -475,7 +430,8 @@ ui <- bootstrapPage(
                crimes are more likely to take place. Through the use of this application, users can acquire an informed understanding of the patterns and trends in 
                criminal activity in San Francisco, and stay updated on the latest information regarding reported crimes in the city. 
                The application employs various visualization techniques to represent the data in an easy-to-understand format, 
-               facilitating users to explore the data and comprehend the crime situation in the city with greater clarity.", 
+               facilitating users to explore the data and comprehend the crime situation in the city with greater clarity.",
+               
                tags$br(),
                tags$br(),
                
@@ -489,31 +445,33 @@ ui <- bootstrapPage(
                tags$br(),
                tags$br()
 
-               
              )))
-    
-    
   )
 )
 
-# Define server logic required to draw a histogram
+
+
+
+
+
+
+# Define server for app
 server <- function(input, output) {
-  selected_date <- reactive({
-    as.character(input$date)
-  })
   
+  # INTERACTIVE MAP SECTION
   
-  
+  # create a function that makes an API call for the selected date
   df_day <- reactive({
     read.socrata(
       paste0(
         "https://data.sfgov.org/resource/wg3w-h783.json?incident_date=",
-        selected_date()
+        input$date
       )
     )
   })
   
   
+  # create leaflet map for yesterday's data
   output$map <- renderLeaflet({
     leaflet(data = yesterday_df) %>%
       addProviderTiles("CartoDB.Voyager") %>%
@@ -525,7 +483,7 @@ server <- function(input, output) {
       )
   })
   
-  
+  # create a function that makes an API call for the selected date and incident category, if selected
   df_day_incident <- reactive({
     if (input$all_incidents) {
       df <-
@@ -547,11 +505,11 @@ server <- function(input, output) {
       df <- df %>%
         filter(incident_category == input$incident_type)
     }
-    
     return(df)
   })
   
   
+  # update the leaflet map to only show incidents for selected date and/or incident category
   observe({
     df <- df_day_incident()
     
@@ -559,83 +517,22 @@ server <- function(input, output) {
       mutate(longitude = as.numeric(longitude),
              latitude = as.numeric(latitude))
     
+    labels <- paste("<strong>", "<font size='+0.2'>", df$incident_description, "</font>", "</strong>", "<br>",
+                    "<strong>", "Incident Date: ", "</strong>", df$incident_date, "<br>",
+                    "<strong>", "Incident Time: ", "</strong>", df$incident_time, "<br>",
+                    "<strong>", "Incident Category: ", "</strong>", df$incident_category, "<br>",
+                    "Click for More Information", sep = "")
     
-    labels <-
-      paste(
-        "<strong>",
-        "<font size='+0.2'>",
-        df$incident_description,
-        "</font>",
-        "</strong>",
-        "<br>",
-        "<strong>",
-        "Incident Date: ",
-        "</strong>",
-        df$incident_date,
-        "<br>",
-        "<strong>",
-        "Incident Time: ",
-        "</strong>",
-        df$incident_time,
-        "<br>",
-        "<strong>",
-        "Incident Category: ",
-        "</strong>",
-        df$incident_category,
-        "<br>",
-        "Click for More Information",
-        sep = ""
-      )
-    
-    popups <-
-      paste(
-        "<strong>",
-        "<font size='+0.2'>",
-        df$incident_description,
-        "</font>",
-        "</strong>",
-        "<br>",
-        "<strong>",
-        "Incident Date: ",
-        "</strong>",
-        df$incident_date,
-        "<br>",
-        "<strong>",
-        "Incident Time: ",
-        "</strong>",
-        df$incident_time,
-        "<br>",
-        "<strong>",
-        "Incident Category: ",
-        "</strong>",
-        df$incident_category,
-        "<br>",
-        "<strong>",
-        "Report Datetime: ",
-        "</strong>",
-        df$report_datetime,
-        "<br>",
-        "<strong>",
-        "Resolution: ",
-        "</strong>",
-        df$resolution,
-        "<br>",
-        "<strong>",
-        "Intersection: ",
-        "</strong>",
-        df$intersection,
-        "<br>",
-        "<strong>",
-        "Neighborhood: ",
-        "</strong>",
-        df$analysis_neighborhood,
-        "<br>",
-        "<strong>",
-        "Incident ID: ",
-        "</strong>",
-        df$incident_id,
-        sep = ""
-      )
+    # create popups for the markers on the map, which include additional information about the incident
+    popups <- paste("<strong>", "<font size='+0.2'>", df$incident_description, "</font>", "</strong>", "<br>",
+                    "<strong>", "Incident Date: ", "</strong>", df$incident_date, "<br>",
+                    "<strong>", "Incident Time: ", "</strong>", df$incident_time, "<br>",
+                    "<strong>", "Incident Category: ", "</strong>", df$incident_category, "<br>",
+                    "<strong>", "Report Datetime: ", "</strong>", df$report_datetime, "<br>",
+                    "<strong>", "Resolution: ", "</strong>", df$resolution, "<br>",
+                    "<strong>", "Intersection: ", "</strong>", df$intersection, "<br>",
+                    "<strong>", "Neighborhood: ", "</strong>", df$analysis_neighborhood, "<br>",
+                    "<strong>", "Incident ID: ", "</strong>", df$incident_id, sep = "")
     
     leafletProxy("map", data = df) %>%
       addProviderTiles("CartoDB.Voyager") %>%
@@ -646,28 +543,30 @@ server <- function(input, output) {
         label = lapply(labels, HTML),
         popup = lapply(popups, HTML)
       )
-    
   })
   
   
   
+  # CRIME HEATMAP SECTION
   
   
-  
-  #############
-  
+  # create a function that makes an API call for the selected month
   selected_month_data <- reactive({
+    
     month_year_selected <- str_split(input$select_month, " ")
+    
     month_name_selected <- month_year_selected[[1]][1]
+    
     year_selected <- month_year_selected[[1]][2]
+    
     date_selected <-
       as.Date(str_replace_all(
         paste(year_selected, "-", month_name_selected, "-", "01"),
         " ",
         ""
       ), format = "%Y-%B-%d")
-    last_day_month <-
-      ceiling_date(date_selected, unit = "month") - days(1)
+    
+    last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
     
     read.socrata(
       paste0(
@@ -685,11 +584,16 @@ server <- function(input, output) {
   })
   
   
+  #create leaflet heatmap for current month
   output$map2 <- renderLeaflet({
+    
     today_mon <- format(Sys.Date() - 2, "%m")
+    
     today_year <- as.character(year(Sys.Date() - 2))
     
-    today_ymd <- paste0(today_year, "-", today_mon, "-", "01")
+    today_ymd <- as.Date(paste0(today_year, "-", today_mon, "-", "01"))
+    
+    today_last_day_of_month <- ceiling_date(today_ymd, unit = "month") - days(1)
     
     df <-
       read.socrata(
@@ -700,7 +604,7 @@ server <- function(input, output) {
           "' ",
           "and ",
           "'",
-          as.Date(today_ymd) + 33,
+          today_last_day_of_month,
           "'"
         )
       )
@@ -710,25 +614,27 @@ server <- function(input, output) {
              latitude = as.numeric(latitude)) %>%
       filter(!is.na(longitude) & !is.na(latitude))
     
-    tag.map.title <- tags$style(
-      HTML(
+    
+      tag.map.title <- tags$style(
+        HTML(
         "
-  .leaflet-control.map-title {
-    transform: translate(-50%,20%);
-    position: fixed !important;
-    left: 50%;
-    text-align: center;
-    padding-left: 50px;
-    padding-right: 50px;
-    background: rgba(255,255,255,0.75);
-    font-weight: bold;
-    font-size: 1000px;
-  }
-"
+        .leaflet-control.map-title {
+        transform: translate(-50%,20%);
+        position: fixed !important;
+        left: 50%;
+        text-align: center;
+        padding-left: 50px;
+        padding-right: 50px;
+        background: rgba(255,255,255,0.75);
+        font-weight: bold;
+        font-size: 1000px;
+        }
+        "
       )
     )
     
-    title <- tags$div(tag.map.title, HTML(paste(month_years[1], "Crime Heatmap")))
+    title <- tags$div(tag.map.title, 
+                      HTML(paste(month_years[1], "Crime Heatmap")))
     
     leaflet(data = df) %>%
       addProviderTiles("CartoDB.Voyager") %>%
@@ -740,9 +646,10 @@ server <- function(input, output) {
         blur = 25
       ) %>%
       addControl(title, position = "topright")
-    
   })
   
+  
+  # update the leaflet heatmap to only use incidents for selected month
   observe({
     df <- selected_month_data()
     
@@ -754,18 +661,17 @@ server <- function(input, output) {
     tag.map.title <- tags$style(
       HTML(
         "
-  .leaflet-control.map-title {
-    transform: translate(-50%,20%);
-    position: fixed !important;
-    left: 50%;
-    text-align: center;
-    padding-left: 50px;
-    padding-right: 50px;
-    background: rgba(255,255,255,0.75);
-    font-weight: bold;
-    font-size: 1000px;
-  }
-"
+        .leaflet-control.map-title {
+        transform: translate(-50%,20%);
+        position: fixed !important;
+        left: 50%;
+        text-align: center;
+        padding-left: 50px;
+        padding-right: 50px;
+        background: rgba(255,255,255,0.75);font-weight: bold;
+        font-size: 1000px;
+        }
+        "
       )
     )
     
@@ -783,25 +689,30 @@ server <- function(input, output) {
       ) %>%
       clearControls() %>%
       addControl(title, position = "topright")
-    
   })
   
-  #################
   
   
+  # CRIME ANALYSIS SECTION
   
+  
+  # create a function that makes an API call for the selected month in the Crime Analysis Section
   selected_month_data2 <- reactive({
+    
     month_year_selected <- str_split(input$select_month2, " ")
+    
     month_name_selected <- month_year_selected[[1]][1]
+    
     year_selected <- month_year_selected[[1]][2]
+    
     date_selected <-
       as.Date(str_replace_all(
         paste(year_selected, "-", month_name_selected, "-", "01"),
         " ",
         ""
       ), format = "%Y-%B-%d")
-    last_day_month <-
-      ceiling_date(date_selected, unit = "month") - days(1)
+    
+    last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
     
     read.socrata(
       paste0(
@@ -815,22 +726,25 @@ server <- function(input, output) {
         "'"
       )
     )
-    
   })
   
-  
+  # create a function that makes an API call for the selected month and selected neighborhood in the Crime Analysis Section
   selected_neighborhood_data <- reactive({
+    
     month_year_selected <- str_split(input$select_month2, " ")
+    
     month_name_selected <- month_year_selected[[1]][1]
+    
     year_selected <- month_year_selected[[1]][2]
+    
     date_selected <-
       as.Date(str_replace_all(
         paste(year_selected, "-", month_name_selected, "-", "01"),
         " ",
         ""
       ), format = "%Y-%B-%d")
-    last_day_month <-
-      ceiling_date(date_selected, unit = "month") - days(1)
+    
+    last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
     
     read.socrata(
       paste0(
@@ -847,10 +761,11 @@ server <- function(input, output) {
         "'"
       )
     )
-    
   })
   
+  # create an interactive plot for SF incident category counts
   output$incident_counts <- renderPlotly({
+    
     df <- selected_month_data2()
     
     cats <- df %>%
@@ -878,7 +793,9 @@ server <- function(input, output) {
     
   })
   
+  # create an interactive plot for neighborhood incident category counts
   output$incident_counts_neighborhood <- renderPlotly({
+    
     df <- selected_neighborhood_data()
     
     cats <- df %>%
@@ -905,8 +822,10 @@ server <- function(input, output) {
     ggplotly(p, tooltip = "text")
   })
   
-  
+  # create a barplot of the number of incidents in each hour in SF
+  # allows user to see the most common incident category in each hour by hovering mouse
   output$hour_day <- renderPlotly({
+    
     df <- selected_month_data2()
     
     df_most_common_incident <- df %>%
@@ -953,10 +872,12 @@ server <- function(input, output) {
       labs(title = "San Francisco")
     
     ggplotly(p, tooltip = "text")
-    
   })
   
+  # create a barplot of the number of incidents in each hour in neighborhood
+  # allows user to see the most common incident category in each hour by hovering mouse
   output$hour_day_neighborhood <- renderPlotly({
+    
     df <- selected_neighborhood_data()
     
     df_most_common_incident <- df %>%
@@ -1006,9 +927,9 @@ server <- function(input, output) {
     
   })
   
-  
-  
+  # create an interactive plot of the incident counts in each neighborhood in SF
   output$neighborhood_counts <- renderPlotly({
+    
     df <- selected_month_data2()
     
     cats <- df %>%
@@ -1033,24 +954,31 @@ server <- function(input, output) {
             plot.title = element_text(hjust = 0.5))
     
     ggplotly(p, tooltip = "text")
-    
   })
   
   
-  ############
   
+  # CRIME DATA TABLE SECTION
+  
+  
+  
+  # create a function that makes an API call for the selected month and neighborhood
   selected_neighborhood_data_search <- reactive({
+    
     month_year_selected <- str_split(input$select_month_search, " ")
+    
     month_name_selected <- month_year_selected[[1]][1]
+    
     year_selected <- month_year_selected[[1]][2]
+    
     date_selected <-
       as.Date(str_replace_all(
         paste(year_selected, "-", month_name_selected, "-", "01"),
         " ",
         ""
       ), format = "%Y-%B-%d")
-    last_day_month <-
-      ceiling_date(date_selected, unit = "month") - days(1)
+    
+    last_day_month <- ceiling_date(date_selected, unit = "month") - days(1)
     
     read.socrata(
       paste0(
@@ -1067,18 +995,16 @@ server <- function(input, output) {
         "'"
       )
     )
-    
   })
   
+  # create the data table output of the selected neighborhood data
   output$table_search <- renderDataTable({
     df <- selected_neighborhood_data_search()
     
     df %>%
       datatable()
   })
-  
-  
-  
+
 }
 
 
