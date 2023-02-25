@@ -106,9 +106,9 @@ yesterday_incident_categories <- yesterday_df %>%
   pull(incident_category)
 
 all_incident_categories <- c(
-  "Larceny Theft",
-  "Malicious Mischief",
   "Assault",
+  "Malicious Mischief",
+  "Larceny Theft",
   "Motor Vehicle Theft",
   "Other Miscellaneous",
   "Non-Criminal",
@@ -444,10 +444,51 @@ ui <- bootstrapPage(
                width = 12,
                
                tags$h1("About this App",
-                       class = "text-center")
+                       class = "text-center"),
                
+               tags$h2("Contact"),
                
+               "Henry Siegler", tags$br(),
                
+               "hsiegler@calpoly.edu", tags$br(),
+               
+               tags$a("LinkedIn", href = "https://www.linkedin.com/in/henrysiegler/"), tags$br(),
+               
+               tags$a("GitHub", href = "https://hasiegler.github.io/Portfolio/"),
+               
+               tags$h2("Source"),
+               
+               tags$a("DataSF: Police Department Incident Reports: 2018 to Present", href = "https://data.sfgov.org/Public-Safety/Police-Department-Incident-Reports-2018-to-Present/wg3w-h783"),
+               
+               tags$h2("Code"),
+               
+               "This web application is written using the R Shiny web framework.", tags$br(),
+               
+               "Code used to generate this Shiny app are available on my", 
+               
+               tags$a("GitHub", href = "https://github.com/hasiegler/SFCrimeDashboard"),
+               
+               tags$h2("App"),
+               
+               "The purpose of this application is to provide an interactive and comprehensive visualization of crime data in the city of San Francisco. 
+               Its primary aim is to enable users to see where crimes are occuring and gain insights into the types of crimes that occur in various areas of the city, and the times when such 
+               crimes are more likely to take place. Through the use of this application, users can acquire an informed understanding of the patterns and trends in 
+               criminal activity in San Francisco, and stay updated on the latest information regarding reported crimes in the city. 
+               The application employs various visualization techniques to represent the data in an easy-to-understand format, 
+               facilitating users to explore the data and comprehend the crime situation in the city with greater clarity.", 
+               tags$br(),
+               tags$br(),
+               
+               "To fetch the daily crime data, the application uses an API offered by the San Francisco Police Department. 
+               Crime reports are submitted by officers or the general public using SFPD’s online reporting system, with data being 
+               added to the database after the incident reports have been reviewed and approved by a supervising Sergeant or Lieutenant.",
+               
+               tags$br(),
+               tags$br(),
+               tags$br(),
+               tags$br(),
+               tags$br()
+
                
              )))
     
@@ -828,8 +869,10 @@ server <- function(input, output) {
       coord_flip() +
       theme_minimal() +
       xlab("") +
-      ylab("Number of Incidents") +
-      theme(axis.text.y = element_text(size = 6))
+      ylab(paste("Number of Incidents in", input$select_month2)) +
+      theme(axis.text.y = element_text(size = 6),
+            plot.title = element_text(hjust = 0.5)) + 
+      labs(title = "San Francisco")
     
     ggplotly(p, tooltip = "text")
     
@@ -854,11 +897,14 @@ server <- function(input, output) {
       coord_flip() +
       theme_minimal() +
       xlab("") +
-      ylab("Number of Incidents") +
-      theme(axis.text.y = element_text(size = 6))
+      ylab(paste("Number of Incidents in", input$select_month2)) +
+      theme(axis.text.y = element_text(size = 6),
+            plot.title = element_text(hjust = 0.5)) + 
+      labs(title = input$select_neighborhood)
     
     ggplotly(p, tooltip = "text")
   })
+  
   
   output$hour_day <- renderPlotly({
     df <- selected_month_data2()
@@ -899,10 +945,12 @@ server <- function(input, output) {
       )) +
       theme_minimal() +
       xlab("Hour of the Day") +
-      ylab("Number of Incidents") +
+      ylab(paste("Number of Incidents in", input$select_month2)) +
       scale_x_discrete(labels = full_df$incident_hour_format) +
       theme(axis.text.x = element_text(size = 6),
-            legend.position = "none")
+            legend.position = "none",
+            plot.title = element_text(hjust = 0.5)) + 
+      labs(title = "San Francisco")
     
     ggplotly(p, tooltip = "text")
     
@@ -947,10 +995,12 @@ server <- function(input, output) {
       )) +
       theme_minimal() +
       xlab("Hour of the Day") +
-      ylab("Number of Incidents") +
+      ylab(paste("Number of Incidents in", input$select_month2)) +
       scale_x_discrete(labels = full_df$incident_hour_format) +
       theme(axis.text.x = element_text(size = 6),
-            legend.position = "none")
+            legend.position = "none",
+            plot.title = element_text(hjust = 0.5)) + 
+      labs(title = input$select_neighborhood)
     
     ggplotly(p, tooltip = "text")
     
@@ -977,7 +1027,7 @@ server <- function(input, output) {
       coord_flip() +
       theme_minimal() +
       xlab("") +
-      ylab("Number of Incidents") +
+      ylab(paste("Number of Incidents in", input$select_month2)) +
       labs(title = "Incident Count by Neighborhood") +
       theme(axis.text.y = element_text(size = 6),
             plot.title = element_text(hjust = 0.5))
