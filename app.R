@@ -302,6 +302,7 @@ ui <- bootstrapPage(
                  tags$h4("San Francisco as a Whole",
                          class = "text-center"))
         ),
+        
         tags$hr(),
         
         fluidRow(
@@ -314,7 +315,19 @@ ui <- bootstrapPage(
                  plotlyOutput("incident_counts", height = "600px"))
         ),
         
+        tags$br(),
+        
+        tags$br(),
+        
+        tags$br(),
+        
         tags$hr(),
+        
+        tags$br(),
+        
+        tags$br(),
+        
+        tags$br(),
         
         fluidRow(
           column(
@@ -326,9 +339,27 @@ ui <- bootstrapPage(
                  plotlyOutput("hour_day", height = "500px"))
         ),
         
+        tags$br(),
+        
+        tags$br(),
+        
+        tags$br(),
+        
         tags$hr(),
         
-        fluidRow(plotlyOutput("neighborhood_counts", height = "600px"))
+        tags$br(),
+        
+        tags$br(),
+        
+        tags$br(),
+        
+        fluidRow(plotlyOutput("neighborhood_counts", height = "600px")),
+        
+        tags$br(),
+        
+        tags$br(),
+        
+        tags$br()
       )
     ),
     
