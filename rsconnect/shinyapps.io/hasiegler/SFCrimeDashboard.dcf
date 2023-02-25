@@ -5,9 +5,9 @@ account: hasiegler
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8387044
-bundleId: 6886201
+bundleId: 6886226
 url: https://hasiegler.shinyapps.io/SFCrimeDashboard/
-when: 1677304494.31423
-lastSyncTime: 1677304494.31424
+when: 1677305087.61267
+lastSyncTime: 1677305087.61268
 asMultiple: FALSE
 asStatic: FALSE
