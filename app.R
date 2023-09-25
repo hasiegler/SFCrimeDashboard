@@ -1,4 +1,4 @@
-library(shiny)          # load the Shiny package for building web apps
+library(shiny)         # load the Shiny package for building web apps
 library(tidyverse)      # load the Tidyverse package for data wrangling and visualization
 library(RSocrata)       # load the RSocrata package for working with Socrata Open Data API
 library(leaflet)        # load the Leaflet package for interactive maps
@@ -8,19 +8,22 @@ library(lubridate)      # load the lubridate package for working with dates and 
 library(plotly)         # load the Plotly package for interactive plots
 
 
+
 # read the Socrata Open Data API endpoint for San Francisco incidents that occurred yesterday
 # using the RSocrata package and store it in yesterday_df
 yesterday_df <- read.socrata(paste0("https://data.sfgov.org/resource/wg3w-h783.json?incident_date=", 
-                                    Sys.Date() - 2))
+                                    Sys.Date() - 3))
+
+
 
 # convert the longitude and latitude columns from characters to numerics
 yesterday_df <- yesterday_df %>%
-  mutate(longitude = as.numeric(longitude), latitude = as.numeric(latitude))
+  dplyr::mutate(longitude = as.numeric(yesterday_df$longitude), latitude = as.numeric(yesterday_df$latitude))
 
 # store the unique incident categories in unique_incident_categories
-unique_incident_categories <- yesterday_df %>% 
-  count(incident_category, sort = TRUE) %>% 
-  pull(incident_category)
+#unique_incident_categories <- yesterday_df %>% 
+#  count(yesterday_df$incident_category, sort = TRUE) %>% 
+#  pull(incident_category)
 
 # create labels for the markers on the map, which include the incident description, date, time, and category
 labels <- paste("<strong>", "<font size='+0.2'>", yesterday_df$incident_description, "</font>", "</strong>", "<br>",
@@ -41,9 +44,9 @@ popups <- paste("<strong>", "<font size='+0.2'>", yesterday_df$incident_descript
                 "<strong>", "Incident ID: ", "</strong>", yesterday_df$incident_id, sep = "")
 
 # store the unique incident categories in yesterday_incident_categories
-yesterday_incident_categories <- yesterday_df %>% 
-  count(incident_category, sort = TRUE) %>% 
-  pull(incident_category)
+#yesterday_incident_categories <- yesterday_df %>% 
+#  count(yesterday_df$incident_category, sort = TRUE) %>% 
+#  pull(yesterday_df$incident_category)
 
 # create a vector of all of the incident categories that have occurred in SF
 all_incident_categories <- c(
@@ -209,9 +212,9 @@ ui <- bootstrapPage(
           dateInput(
             "date",
             label = "Choose Date",
-            value = Sys.Date() - 2,
+            value = Sys.Date() - 3,
             min = "2018-01-01",
-            max = Sys.Date() - 2
+            max = Sys.Date() - 3
           ),
           
           conditionalPanel(
@@ -545,8 +548,8 @@ server <- function(input, output) {
     df <- df_day_incident()
     
     df <- df %>%
-      mutate(longitude = as.numeric(longitude),
-             latitude = as.numeric(latitude))
+      dplyr::mutate(longitude = as.numeric(df$longitude),
+             latitude = as.numeric(df$latitude))
     
     labels <- paste("<strong>", "<font size='+0.2'>", df$incident_description, "</font>", "</strong>", "<br>",
                     "<strong>", "Incident Date: ", "</strong>", df$incident_date, "<br>",
@@ -641,8 +644,8 @@ server <- function(input, output) {
       )
     
     df <- df %>%
-      mutate(longitude = as.numeric(longitude),
-             latitude = as.numeric(latitude)) %>%
+      dplyr::mutate(longitude = as.numeric(df$longitude),
+             latitude = as.numeric(df$latitude)) %>%
       filter(!is.na(longitude) & !is.na(latitude))
     
     
@@ -685,8 +688,8 @@ server <- function(input, output) {
     df <- selected_month_data()
     
     df <- df %>%
-      mutate(longitude = as.numeric(longitude),
-             latitude = as.numeric(latitude)) %>%
+      dplyr::mutate(longitude = as.numeric(df$longitude),
+             latitude = as.numeric(df$latitude)) %>%
       filter(!is.na(longitude) & !is.na(latitude))
     
     tag.map.title <- tags$style(
@@ -802,7 +805,7 @@ server <- function(input, output) {
     cats <- df %>%
       select(incident_category) %>%
       drop_na() %>%
-      count(incident_category, sort = TRUE)
+      dplyr::count(incident_category, sort = TRUE)
     
     p <- ggplot(cats, aes(x = reorder(incident_category, n),
                           y = n)) +
@@ -832,7 +835,7 @@ server <- function(input, output) {
     cats <- df %>%
       select(incident_category) %>%
       drop_na() %>%
-      count(incident_category, sort = TRUE)
+      dplyr::count(incident_category, sort = TRUE)
     
     p <- ggplot(cats, aes(x = reorder(incident_category, n),
                           y = n)) +
@@ -860,22 +863,22 @@ server <- function(input, output) {
     df <- selected_month_data2()
     
     df_most_common_incident <- df %>%
-      mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>%
+      dplyr::mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>%
       group_by(incident_hour) %>%
-      count(incident_category, sort = TRUE) %>%
+      dplyr::count(incident_category, sort = TRUE) %>%
       group_by(incident_hour) %>%
       slice(which.max(n))
     
     df_count_hour <- df %>%
-      mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>%
-      count(incident_hour) %>%
+      dplyr::mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>%
+      dplyr::count(incident_hour) %>%
       rename(number = n)
     
     full_df <-
       full_join(df_count_hour, df_most_common_incident, by = "incident_hour")
     
     full_df <- full_df %>%
-      mutate(
+      dplyr::mutate(
         incident_hour_format = strftime(strptime(
           sprintf("%02d", incident_hour), format = "%H"
         ), format = "%I %p"),
@@ -912,22 +915,24 @@ server <- function(input, output) {
     df <- selected_neighborhood_data()
     
     df_most_common_incident <- df %>%
-      mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>%
-      group_by(incident_hour) %>%
-      count(incident_category, sort = TRUE) %>%
+      dplyr::mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M")))
+      
+    df_most_common_incident <- df_most_common_incident %>% 
+      group_by(incident_hour)
+      dplyr::count(incident_category, sort = TRUE) %>%
       group_by(incident_hour) %>%
       slice(which.max(n))
     
     df_count_hour <- df %>%
-      mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>%
-      count(incident_hour) %>%
+      dplyr::mutate(incident_hour = hour(strptime(incident_time, format = "%H:%M"))) %>%
+      dplyr::count(incident_hour) %>%
       rename(number = n)
     
     full_df <-
       full_join(df_count_hour, df_most_common_incident, by = "incident_hour")
     
     full_df <- full_df %>%
-      mutate(
+      dplyr::mutate(
         incident_hour_format = strftime(strptime(
           sprintf("%02d", incident_hour), format = "%H"
         ), format = "%I %p"),
@@ -963,10 +968,10 @@ server <- function(input, output) {
     
     df <- selected_month_data2()
     
-    cats <- df %>%
-      select(analysis_neighborhood) %>%
-      drop_na() %>%
-      count(analysis_neighborhood, sort = TRUE)
+    cats <- df %>% 
+      select(analysis_neighborhood) %>% 
+      drop_na() %>% 
+      dplyr::count(analysis_neighborhood, sort = TRUE)
     
     p <- ggplot(cats, aes(x = reorder(analysis_neighborhood, n),
                           y = n)) +
